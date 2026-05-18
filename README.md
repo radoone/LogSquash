@@ -15,6 +15,31 @@ Perfect for **Gemini CLI, Claude Code, Cursor, Windsurf**, and any other agent s
 
 ## Integration
 
+Because LogSquash is built on the **Model Context Protocol (MCP)**, it works natively with all modern AI coding assistants.
+
+### GitHub Copilot (VS Code / Visual Studio)
+Copilot supports MCP natively in "Agent Mode".
+1. In VS Code, create a file at `.vscode/mcp.json` (or use the global MCP config).
+2. Add the LogSquash server configuration:
+```json
+{
+  "mcpServers": {
+    "logsquash": {
+      "command": "node",
+      "args": ["/absolute/path/to/LogSquash/dist/index.js"]
+    }
+  }
+}
+```
+
+### Cursor & Windsurf
+Cursor and Windsurf support MCP servers directly through their settings UI.
+1. Open Settings -> Features -> MCP (or Context).
+2. Add a new MCP server:
+   - **Type**: `stdio`
+   - **Name**: `logsquash`
+   - **Command**: `node /absolute/path/to/LogSquash/dist/index.js`
+
 ### Claude Desktop
 Add this to your `claude_desktop_config.json`:
 
@@ -23,7 +48,7 @@ Add this to your `claude_desktop_config.json`:
   "mcpServers": {
     "logsquash": {
       "command": "node",
-      "args": ["/path/to/LogSquash/dist/index.js"]
+      "args": ["/absolute/path/to/LogSquash/dist/index.js"]
     }
   }
 }
