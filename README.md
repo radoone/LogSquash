@@ -13,63 +13,29 @@ Perfect for **Gemini CLI, Claude Code, Cursor, Windsurf**, and any other agent s
 *   🎯 **Enhance AI Focus**: Removing visual noise and boilerplate helps LLMs focus on specific errors and anomalies.
 *   ⚡ **Zero Model Overhead**: Pure, fast text-processing heuristic. No extra API calls needed for compression.
 
-## Integration
+## Install
 
-Because LogSquash is built on the **Model Context Protocol (MCP)**, it works natively with all modern AI coding assistants.
+LogSquash works natively with all modern AI coding assistants. 
 
-### GitHub Copilot (VS Code / Visual Studio)
-Copilot supports MCP natively in "Agent Mode".
-1. In VS Code, create a file at `.vscode/mcp.json` (or use the global MCP config).
-2. Add the LogSquash server configuration:
-```json
-{
-  "mcpServers": {
-    "logsquash": {
-      "command": "node",
-      "args": ["/absolute/path/to/LogSquash/dist/index.js"]
-    }
-  }
-}
-```
+### Per-Agent Install Commands
 
-### Cursor & Windsurf
-Cursor and Windsurf support MCP servers directly through their settings UI.
-1. Open Settings -> Features -> MCP (or Context).
-2. Add a new MCP server:
-   - **Type**: `stdio`
-   - **Name**: `logsquash`
-   - **Command**: `node /absolute/path/to/LogSquash/dist/index.js`
+| Agent | Install command | Note |
+|---|---|---|
+| **Gemini CLI** | `gemini extensions install https://github.com/radoone/LogSquash --auto-update` | Native extension. Auto-activates MCP server and skill. |
+| **Codex CLI** | `codex extensions install https://github.com/radoone/LogSquash --auto-update` | Native extension. Auto-activates MCP server and skill. |
+| **Cursor** | `npx skills add radoone/LogSquash -a cursor` | Requires manual MCP setup (see below). |
+| **Windsurf** | `npx skills add radoone/LogSquash -a windsurf` | Requires manual MCP setup (see below). |
+| **GitHub Copilot** | `npx skills add radoone/LogSquash -a copilot` | Requires manual MCP setup (see below). |
+| **Cline** | `npx skills add radoone/LogSquash -a cline` | Requires manual MCP setup (see below). |
 
-### Claude Desktop
-Add this to your `claude_desktop_config.json`:
+*If your agent isn't listed above but supports Vercel's `npx skills`, you can try `npx skills add radoone/LogSquash -a <agent-name>`.*
 
-```json
-{
-  "mcpServers": {
-    "logsquash": {
-      "command": "node",
-      "args": ["/absolute/path/to/LogSquash/dist/index.js"]
-    }
-  }
-}
-```
+### Manual MCP Setup
 
-### Gemini CLI (Native Extension)
-LogSquash is natively supported by Gemini CLI. Install it directly using:
-```bash
-gemini extensions install https://github.com/radoone/LogSquash --auto-update
-```
-The `--auto-update` flag ensures Gemini CLI will automatically fetch new versions when they are released. Restart Gemini CLI to activate the `logsquash` skill and `squash_logs` tool.
+For agents that don't auto-configure MCP servers via extensions (like Cursor, Copilot, Windsurf, or Claude Desktop), you need to tell them how to run the LogSquash server.
 
-### Codex CLI (Native Extension)
-LogSquash is natively supported by Codex CLI. Install it directly using:
-```bash
-codex extensions install https://github.com/radoone/LogSquash --auto-update
-```
-Restart Codex CLI to activate the `logsquash` skill and `squash_logs` tool.
+Since LogSquash is published to GitHub and executable via `npx`, you don't even need to clone the repository. Just add this to your agent's MCP configuration file (e.g., `.vscode/mcp.json` for Copilot, or `claude_desktop_config.json`):
 
-### GitHub Copilot (VS Code)
-1. Add the MCP server to your `.vscode/mcp.json` or global VS Code MCP configuration:
 ```json
 {
   "mcpServers": {
@@ -80,30 +46,11 @@ Restart Codex CLI to activate the `logsquash` skill and `squash_logs` tool.
   }
 }
 ```
-2. *(Optional)* Add the skill instructions so Copilot knows *when* to use it:
-```bash
-npx skills add radoone/LogSquash -a copilot
-```
 
-## Features
-- **`squash_logs` tool**: Automatically identifies repeating patterns and replaces them with short dictionary keys.
-- **LLM-Ready Output**: Prepends a `LOG DICTIONARY` to the squashed logs, which LLMs natively understand.
-
-## Installation & Setup
-
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Build the project:
-   ```bash
-   npm run build
-   ```
-4. Run locally (optional):
-   ```bash
-   node dist/index.js
-   ```
+For **Cursor** and **Windsurf** settings UI:
+- **Type**: `stdio`
+- **Name**: `logsquash`
+- **Command**: `npx -y github:radoone/LogSquash`
 
 ## License
 MIT
