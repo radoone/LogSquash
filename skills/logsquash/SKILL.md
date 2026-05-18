@@ -1,11 +1,11 @@
-# Skill: LogSquash 🪵🗜️
+---
+name: logsquash
+description: Squash repetitive logs into a dictionary-based compressed format to save tokens. Use when the user provides large logs or when context limits are being reached.
+---
+
+# LogSquash 🪵🗜️
 
 This skill allows the agent to compress large, repetitive log files using the LogSquash MCP server. This saves tokens and expands the effective context window.
-
-## When to use
-- When the user provides a large log file for analysis.
-- When log-heavy terminal output is being processed.
-- When you are hitting context window limits due to verbose diagnostics.
 
 ## Instructions
 1.  **Identify Logs**: Locate the log file or text that needs analysis.

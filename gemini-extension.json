@@ -1,24 +1,6 @@
 {
   "name": "logsquash",
-  "version": "1.0.0",
   "description": "Log compression MCP server for token saving",
-  "author": "radoone",
-  "license": "MIT",
-  "engines": {
-    "gemini-cli": ">=0.40.0"
-  },
-  "capabilities": {
-    "mcpServers": [
-      {
-        "name": "logsquash",
-        "path": "dist/index.js"
-      }
-    ],
-    "skills": [
-      {
-        "name": "logsquash",
-        "path": "skills/logsquash/SKILL.md"
-      }
-    ]
-  }
+  "version": "1.0.0",
+  "contextFileName": "GEMINI.md"
 }
