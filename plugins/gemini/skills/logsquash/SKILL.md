@@ -1,6 +1,6 @@
 ---
 name: logsquash
-description: Squash repetitive logs into a dictionary-based compressed format to save tokens. Use when the user provides large logs or when context limits are being reached.
+description: Squash repetitive logs into a dictionary-based compressed format to save tokens. Auto-triggers when the user pastes large logs, asks to analyze logs, or when context limits are reached.
 ---
 
 # LogSquash 🪵🗜️
