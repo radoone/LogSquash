@@ -24,5 +24,8 @@ echo "Building LogSquash..."
 npm install
 npm run build
 
+# Link the config to the root of the extension so Gemini CLI can find it
+ln -sf plugins/gemini/gemini-extension.json gemini-extension.json
+
 echo "✅ LogSquash installed successfully!"
 echo "Restart your Gemini CLI session to activate the new tools."

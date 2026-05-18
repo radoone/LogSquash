@@ -24,5 +24,8 @@ echo "Building LogSquash..."
 npm install
 npm run build
 
+# Link the config to the root of the extension so Codex CLI can find it
+ln -sf plugins/codex/codex-extension.json codex-extension.json
+
 echo "✅ LogSquash installed successfully!"
 echo "Restart your Codex CLI session to activate the new tools."
