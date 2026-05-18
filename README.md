@@ -57,9 +57,9 @@ Add this to your `claude_desktop_config.json`:
 ### Gemini CLI (Native Extension)
 LogSquash is natively supported by Gemini CLI. Install it directly using:
 ```bash
-gemini extensions install https://github.com/radoone/LogSquash
+gemini extensions install https://github.com/radoone/LogSquash --auto-update
 ```
-Restart Gemini CLI to activate the `logsquash` skill and `squash_logs` tool.
+The `--auto-update` flag ensures Gemini CLI will automatically fetch new versions when they are released. Restart Gemini CLI to activate the `logsquash` skill and `squash_logs` tool.
 
 ### Codex CLI (Native Plugin)
 Codex CLI supports adding plugins directly via its UI using a "sparse checkout" of the repository.
