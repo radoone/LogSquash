@@ -1,10 +1,10 @@
 {
   "name": "logsquash",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Log compression MCP server for token saving",
   "author": "radoone",
   "license": "MIT",
-  "contextFileName": "plugins/codex/AGENTS.md",
+  "contextFileName": "AGENTS.md",
   "capabilities": {
     "mcpServers": [
       {
@@ -15,7 +15,7 @@
     "skills": [
       {
         "name": "logsquash",
-        "path": "plugins/codex/skills/logsquash/SKILL.md"
+        "path": "skills/logsquash/SKILL.md"
       }
     ]
   }

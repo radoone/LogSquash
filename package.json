@@ -2,11 +2,14 @@
   "name": "logsquash-mcp",
   "version": "1.0.1",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "bin": {
+    "logsquash": "dist/index.js"
+  },
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/index.js",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node18 --banner:js=\"#!/usr/bin/env node\" --outfile=dist/index.js",
     "start": "node dist/index.js",
-    "version": "node -e \"let fs=require('fs'); let ext=require('./gemini-extension.json'); ext.version=process.env.npm_package_version; fs.writeFileSync('./gemini-extension.json', JSON.stringify(ext, null, 2) + '\\n');\" && git add gemini-extension.json",
+    "version": "node -e \"let fs=require('fs'); let gExt=require('./gemini-extension.json'); gExt.version=process.env.npm_package_version; fs.writeFileSync('./gemini-extension.json', JSON.stringify(gExt, null, 2) + '\\n'); let cExt=require('./codex-extension.json'); cExt.version=process.env.npm_package_version; fs.writeFileSync('./codex-extension.json', JSON.stringify(cExt, null, 2) + '\\n');\" && git add gemini-extension.json codex-extension.json",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

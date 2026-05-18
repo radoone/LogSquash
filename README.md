@@ -61,22 +61,29 @@ gemini extensions install https://github.com/radoone/LogSquash --auto-update
 ```
 The `--auto-update` flag ensures Gemini CLI will automatically fetch new versions when they are released. Restart Gemini CLI to activate the `logsquash` skill and `squash_logs` tool.
 
-### Codex CLI (Native Plugin)
-Codex CLI supports adding plugins directly via its UI using a "sparse checkout" of the repository.
-
-1. Open the **Add marketplace** dialog in Codex.
-2. Under **Source**, enter `radoone/LogSquash` (or `git@github.com:radoone/LogSquash.git`).
-3. Under **Git ref**, enter `main`.
-4. Under **Sparse paths**, enter `plugins/codex`.
-5. Click **Add marketplace**.
-
-Alternatively, you can install it using the dedicated install script:
+### Codex CLI (Native Extension)
+LogSquash is natively supported by Codex CLI. Install it directly using:
 ```bash
-curl -sSL https://raw.githubusercontent.com/radoone/LogSquash/main/plugins/codex/install.sh | bash
+codex extensions install https://github.com/radoone/LogSquash --auto-update
 ```
+Restart Codex CLI to activate the `logsquash` skill and `squash_logs` tool.
 
-### Claude Desktop / Cursor / Other Agents
-Configure the agent to use the MCP server by pointing it to the built `dist/index.js` file.
+### GitHub Copilot (VS Code)
+1. Add the MCP server to your `.vscode/mcp.json` or global VS Code MCP configuration:
+```json
+{
+  "mcpServers": {
+    "logsquash": {
+      "command": "npx",
+      "args": ["-y", "github:radoone/LogSquash"]
+    }
+  }
+}
+```
+2. *(Optional)* Add the skill instructions so Copilot knows *when* to use it:
+```bash
+npx skills add radoone/LogSquash -a copilot
+```
 
 ## Features
 - **`squash_logs` tool**: Automatically identifies repeating patterns and replaces them with short dictionary keys.
