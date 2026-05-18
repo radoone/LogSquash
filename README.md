@@ -54,10 +54,10 @@ Add this to your `claude_desktop_config.json`:
 }
 ```
 
-### Gemini CLI & Codex CLI (Native Extension)
-The easiest way to install LogSquash for Gemini CLI and Codex CLI is using our one-liner install script:
+### Gemini CLI (Native Extension)
+The easiest way to install LogSquash for Gemini CLI is using the dedicated install script:
 ```bash
-curl -sSL https://raw.githubusercontent.com/radoone/LogSquash/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/radoone/LogSquash/main/plugins/gemini/install.sh | bash
 ```
 
 Or manually:
@@ -71,6 +71,20 @@ Or manually:
    npm install && npm run build
    ```
 3. Restart Gemini CLI. The `logsquash` skill and `squash_logs` tool will now be available.
+
+### Codex CLI (Native Plugin)
+Codex CLI supports adding plugins directly via its UI using a "sparse checkout" of the repository.
+
+1. Open the **Add marketplace** dialog in Codex.
+2. Under **Source**, enter `radoone/LogSquash` (or `git@github.com:radoone/LogSquash.git`).
+3. Under **Git ref**, enter `main`.
+4. Under **Sparse paths**, enter `plugins/codex`.
+5. Click **Add marketplace**.
+
+Alternatively, you can install it using the dedicated install script:
+```bash
+curl -sSL https://raw.githubusercontent.com/radoone/LogSquash/main/plugins/codex/install.sh | bash
+```
 
 ### Claude Desktop / Cursor / Other Agents
 Configure the agent to use the MCP server by pointing it to the built `dist/index.js` file.
