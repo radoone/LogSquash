@@ -30,6 +30,13 @@ LogSquash works natively with all modern AI coding assistants.
 
 *If your agent isn't listed above but supports Vercel's `npx skills`, you can try `npx skills add radoone/LogSquash -a <agent-name>`.*
 
+### Codex UI (Marketplace)
+If you prefer using the Codex graphical interface instead of the CLI:
+1. Open the **Add marketplace** dialog in Codex.
+2. Under **Source**, enter `radoone/LogSquash` (or `https://github.com/radoone/LogSquash.git`).
+3. Under **Git ref**, enter `main`.
+4. Click **Add marketplace**.
+
 ### Manual MCP Setup
 
 For agents that don't auto-configure MCP servers via extensions (like Cursor, Copilot, Windsurf, or Claude Desktop), you need to tell them how to run the LogSquash server.
