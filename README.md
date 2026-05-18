@@ -54,8 +54,8 @@ Add this to your `claude_desktop_config.json`:
 }
 ```
 
-### Gemini CLI (Native Extension)
-The easiest way to install LogSquash is using our one-liner install script:
+### Gemini CLI & Codex CLI (Native Extension)
+The easiest way to install LogSquash for Gemini CLI and Codex CLI is using our one-liner install script:
 ```bash
 curl -sSL https://raw.githubusercontent.com/radoone/LogSquash/main/install.sh | bash
 ```

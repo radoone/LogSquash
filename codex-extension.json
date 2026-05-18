@@ -1,0 +1,6 @@
+{
+  "name": "logsquash",
+  "description": "Log compression MCP server for token saving",
+  "version": "1.0.0",
+  "contextFileName": "AGENTS.md"
+}
