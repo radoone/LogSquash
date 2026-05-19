@@ -62,20 +62,30 @@ class LogCompressor {
 
   public compress(lines: string[]): { header: string; compressed: string[] } {
     const patterns = this.findPatterns(lines);
+    const finalPatterns: string[] = [];
     
     for (const pattern of patterns) {
-      if (!this.reverseDict.has(pattern)) {
-        const key = this.getNextKey();
-        this.dictionary.set(key, pattern);
-        this.reverseDict.set(pattern, key);
+      // Calculate efficiency: how much we actually save
+      // frequency * (patternLen - keyLen) - overhead
+      // We estimate keyLen is ~3 chars (#1, #22, etc)
+      // Overhead is the dictionary entry itself: patternLen + 5
+      const freq = this.getFrequency(lines, pattern);
+      const savings = freq * (pattern.length - 3) - (pattern.length + 5);
+      
+      if (savings > 10) { // Only add if we save more than 10 chars
+        if (!this.reverseDict.has(pattern)) {
+          const key = this.getNextKey();
+          this.dictionary.set(key, pattern);
+          this.reverseDict.set(pattern, key);
+          finalPatterns.push(pattern);
+        }
       }
     }
 
     const compressedLines = lines.map(line => {
       let compressed = line;
-      for (const pattern of patterns) {
+      for (const pattern of finalPatterns) {
         const key = this.reverseDict.get(pattern)!;
-        // Use global regex for all occurrences
         compressed = compressed.split(pattern).join(key);
       }
       return compressed;
@@ -87,6 +97,15 @@ class LogCompressor {
     });
 
     return { header, compressed: compressedLines };
+  }
+
+  private getFrequency(lines: string[], pattern: string): number {
+    let count = 0;
+    for (const line of lines) {
+      const parts = line.split(pattern);
+      count += parts.length - 1;
+    }
+    return count;
   }
 }
 

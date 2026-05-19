@@ -24,7 +24,7 @@ class LogCompressor {
         fragmentCounts.set(token, (fragmentCounts.get(token) || 0) + 1);
       }
 
-      const rawTokens = normalized.split(/(\s+)/).filter(t => t.length > 0);
+      const rawTokens = normalized.split(/(\s+|(?=[\[\]\|\{\}\"\',:]+)|(?<=[\[\]\|\{\}\"\',:]+))/).filter(t => t.trim().length > 0);
       for (let len = 2; len <= 5; len++) {
         for (let i = 0; i <= rawTokens.length - len; i++) {
           const phrase = rawTokens.slice(i, i + len).join("");
@@ -74,6 +74,17 @@ const logs = fs.readFileSync('logs.txt', 'utf8');
 const lines = logs.split("\n").filter(l => l.trim() !== "");
 const compressor = new LogCompressor(10, 2);
 const { header, compressed } = compressor.compress(lines);
+
+const originalCharCount = logs.length;
+const compressedOutput = compressed.join("\n");
+const dictionaryCharCount = header.length;
+const totalCompressedSize = compressedOutput.length + dictionaryCharCount;
+const savings = ((originalCharCount - totalCompressedSize) / originalCharCount * 100).toFixed(2);
+
 console.log(header);
 console.log("\nCOMPRESSED LOGS:");
-console.log(compressed.join("\n"));
+console.log(compressedOutput);
+console.log("\nCOMPRESSION STATS:");
+console.log(`Original characters: ${originalCharCount}`);
+console.log(`Compressed characters (including dictionary): ${totalCompressedSize}`);
+console.log(`Savings: ${savings}%`);
