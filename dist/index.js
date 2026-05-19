@@ -24775,7 +24775,7 @@ var LogCompressor = class {
       for (const token of tokens) {
         fragmentCounts.set(token, (fragmentCounts.get(token) || 0) + 1);
       }
-      const rawTokens = normalized.split(/(\s+)/).filter((t) => t.length > 0);
+      const rawTokens = normalized.split(/(\s+|(?=[\[\]\|\{\}\"\',:]+)|(?<=[\[\]\|\{\}\"\',:]+))/).filter((t) => t.trim().length > 0);
       for (let len = 2; len <= 5; len++) {
         for (let i = 0; i <= rawTokens.length - len; i++) {
           const phrase = rawTokens.slice(i, i + len).join("");

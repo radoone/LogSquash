@@ -30,18 +30,19 @@ class LogCompressor {
     const fragmentCounts = new Map<string, number>();
 
     for (const line of lines) {
-      // 1. Normalize line (Keep only TS masking as requested)
+      // 1. Normalize line (Only mask timestamps to find structural patterns)
       let normalized = line.replace(/\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(,\d+)?Z?/g, "<TS>");
       
-      // 2. Tokenize with broader delimiters to catch structural patterns
+      // 2. Tokenize with delimiters that PRESERVE typical ID characters (-, _, .)
+      // We split on spaces, brackets, pipes, and JSON-structural characters
       const tokens = normalized.split(/[\s\[\]\|\{\}\"\',:]+/).filter(t => t.length >= this.minLen);
       for (const token of tokens) {
         fragmentCounts.set(token, (fragmentCounts.get(token) || 0) + 1);
       }
 
       // 3. Aggressive Phrase Discovery (n-grams from 2 to 5 tokens)
-      // This will catch things like "ERROR in", "failed to connect to", etc.
-      const rawTokens = normalized.split(/(\s+)/).filter(t => t.length > 0);
+      // This will catch "ID: <repeating_id>" or "ERROR in /path"
+      const rawTokens = normalized.split(/(\s+|(?=[\[\]\|\{\}\"\',:]+)|(?<=[\[\]\|\{\}\"\',:]+))/).filter(t => t.trim().length > 0);
       for (let len = 2; len <= 5; len++) {
         for (let i = 0; i <= rawTokens.length - len; i++) {
           const phrase = rawTokens.slice(i, i + len).join("");
@@ -53,7 +54,6 @@ class LogCompressor {
     }
 
     // Filter and sort by length descending
-    // Longest matches first ensures "ERROR in /path" is caught before just "ERROR in"
     return Array.from(fragmentCounts.entries())
       .filter(([_, freq]) => freq >= this.minFreq)
       .map(([text]) => text)
