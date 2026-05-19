@@ -26,18 +26,18 @@ LogSquash identifies structural patterns and replaces them with short symbols, a
 **Original Logs:**
 ```text
 [2026-05-19 10:00:01] ERROR in /usr/src/app/auth.py: Timeout. ID: 550e8400-e29b-41d4-a716-446655440000
-[2026-05-19 10:00:05] ERROR in /usr/src/app/auth.py: Timeout. ID: 660f9511-f30c-52e5-b827-557766551111
+[2026-05-19 10:00:05] ERROR in /usr/src/app/auth.py: Timeout. ID: 550e8400-e29b-41d4-a716-446655440000
 ```
 
 **Squashed Logs:**
 ```text
 LOG DICTIONARY:
-#1: /usr/src/app/auth.py
-#2: Timeout.
+#1: ERROR in /usr/src/app/auth.py: Timeout.
+#2: ID: 550e8400-e29b-41d4-a716-446655440000
 
 COMPRESSED LOGS:
-[<TS>] ERROR in #1: #2 ID: <UUID>
-[<TS>] ERROR in #1: #2 ID: <UUID>
+[<TS>] #1 #2
+[<TS>] #1 #2
 ```
 
 ## Installation
