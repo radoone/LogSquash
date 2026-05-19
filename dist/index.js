@@ -24770,17 +24770,23 @@ var LogCompressor = class {
   findPatterns(lines) {
     const fragmentCounts = /* @__PURE__ */ new Map();
     for (const line of lines) {
-      const cleanLine = line.replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(,\d+)?/g, "<TS>");
-      const parts = line.split(/[\[\]\|]/);
-      for (let part of parts) {
-        part = part.trim();
-        if (part.length >= this.minLen) {
-          fragmentCounts.set(part, (fragmentCounts.get(part) || 0) + 1);
-        }
+      let normalized = line.replace(/\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(,\d+)?Z?/g, "<TS>").replace(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g, "<UUID>").replace(/0x[0-9a-fA-F]+/g, "<HEX>").replace(/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/g, "<IP>");
+      const tokens = normalized.split(/[\s\[\]\|\{\}\"\',:]+/).filter((t) => t.length >= this.minLen);
+      for (const token of tokens) {
+        fragmentCounts.set(token, (fragmentCounts.get(token) || 0) + 1);
       }
-      const msgPart = line.replace(/^.*?\] /, "");
-      if (msgPart.length >= this.minLen) {
-        fragmentCounts.set(msgPart, (fragmentCounts.get(msgPart) || 0) + 1);
+      const rawTokens = normalized.split(/[\s\[\]\|]+/).filter((t) => t.trim().length > 0);
+      for (let i = 0; i < rawTokens.length - 1; i++) {
+        const phrase2 = `${rawTokens[i]} ${rawTokens[i + 1]}`;
+        if (phrase2.length >= this.minLen) {
+          fragmentCounts.set(phrase2, (fragmentCounts.get(phrase2) || 0) + 1);
+        }
+        if (i < rawTokens.length - 2) {
+          const phrase3 = `${phrase2} ${rawTokens[i + 2]}`;
+          if (phrase3.length >= this.minLen) {
+            fragmentCounts.set(phrase3, (fragmentCounts.get(phrase3) || 0) + 1);
+          }
+        }
       }
     }
     return Array.from(fragmentCounts.entries()).filter(([_, freq]) => freq >= this.minFreq).map(([text]) => text).sort((a, b) => b.length - a.length);
