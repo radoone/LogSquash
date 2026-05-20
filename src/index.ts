@@ -7,16 +7,18 @@ import {
 import { z } from "zod";
 
 /**
- * LogSquash v2.0 - Advanced Semantic Compression
+ * LogSquash v2.1.0 - Advanced Semantic Compression
  */
 class LogCompressor {
   private minLen: number;
+  private mode: "lossless" | "semantic";
   private dictionary: Map<string, string> = new Map();
   private reverseDict: Map<string, string> = new Map();
   private counter: number = 0;
 
-  constructor(minLen: number = 10) {
+  constructor(minLen: number = 10, mode: "lossless" | "semantic" = "semantic") {
     this.minLen = minLen;
+    this.mode = mode;
   }
 
   private getNextKey(): string {
@@ -25,6 +27,7 @@ class LogCompressor {
   }
 
   private normalize(line: string): string {
+    if (this.mode === "lossless") return line;
     return line.replace(/\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(,\d+)?Z?/g, "<TS>");
   }
 
@@ -48,7 +51,7 @@ class LogCompressor {
     // Add frequent whole lines to dictionary
     for (const [line, freq] of lineFrequencies.entries()) {
       const level = this.getLogLevel(line);
-      const threshold = level === "ERROR" ? 5 : 2; // Be less aggressive with errors
+      const threshold = level === "ERROR" ? 5 : 2; 
       
       const savings = freq * (line.length - 3) - (line.length + 5);
       if (freq >= threshold && savings > 20) {
@@ -61,12 +64,10 @@ class LogCompressor {
     }
 
     // 2. Template Discovery & Phrase matching (N-grams)
-    // We only look for patterns in what's left after whole-line replacement
     const fragmentCounts = new Map<string, number>();
     for (const line of normalizedLines) {
       if (this.reverseDict.has(line)) continue;
 
-      // Tokenize for structural phrases
       const rawTokens = line.split(/(\s+|(?=[\[\]\|\{\}\"\',:]+)|(?<=[\[\]\|\{\}\"\',:]+))/).filter(t => t.trim().length > 0);
       for (let len = 2; len <= 5; len++) {
         for (let i = 0; i <= rawTokens.length - len; i++) {
@@ -103,13 +104,11 @@ class LogCompressor {
 
     for (const line of normalizedLines) {
       let compressed = line;
-      // Try whole line first (highest priority)
       if (this.reverseDict.has(line)) {
         compressed = this.reverseDict.get(line)!;
       } else {
-        // Partial replacement
         for (const pattern of allPatterns) {
-          if (pattern.length < 15) continue; // Don't split lines for small patterns
+          if (pattern.length < 15) continue;
           if (compressed.includes(pattern)) {
             const key = this.reverseDict.get(pattern)!;
             compressed = compressed.split(pattern).join(key);
@@ -117,8 +116,8 @@ class LogCompressor {
         }
       }
 
-      // Semantic deduplication (Sequential repeats)
-      if (compressed === lastKey && compressed.startsWith("#")) {
+      // Semantic deduplication (Sequential repeats) - Only in semantic mode
+      if (this.mode === "semantic" && compressed === lastKey && compressed.startsWith("#")) {
         repeatCount++;
       } else {
         if (repeatCount > 0) {
@@ -129,12 +128,11 @@ class LogCompressor {
         repeatCount = 0;
       }
     }
-    // Handle last line repeat
     if (repeatCount > 0) {
       finalLines[finalLines.length - 1] += ` (repeated ${repeatCount + 1}x)`;
     }
 
-    let header = "LOG DICTIONARY:\n";
+    let header = `LOG DICTIONARY (Mode: ${this.mode}):\n`;
     this.dictionary.forEach((val, key) => {
       header += `${key}: ${val}\n`;
     });
@@ -149,7 +147,7 @@ class LogCompressor {
 const server = new Server(
   {
     name: "logsquash",
-    version: "2.0.0",
+    version: "2.1.0",
   },
   {
     capabilities: {
@@ -160,6 +158,7 @@ const server = new Server(
 
 const SquashArgumentsSchema = z.object({
   logs: z.string().describe("The log content to squash"),
+  mode: z.enum(["lossless", "semantic"]).optional().default("semantic").describe("Compression mode: 'lossless' (preserves time/lines) or 'semantic' (max savings)"),
   minLen: z.number().optional().default(10).describe("Minimum pattern length"),
 });
 
@@ -168,12 +167,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "squash_logs",
-        description: "Advanced semantic log compression (v2.0). Uses line aggregation, templates, and priority-based filtering.",
+        description: "Advanced log compression. Choose 'semantic' for max savings or 'lossless' for full precision.",
         inputSchema: {
           type: "object",
           properties: {
             logs: { type: "string" },
-            minLen: { type: "number" },
+            mode: { type: "string", enum: ["lossless", "semantic"], default: "semantic" },
+            minLen: { type: "number", default: 10 },
           },
           required: ["logs"],
         },
@@ -187,10 +187,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     throw new Error("Unknown tool");
   }
 
-  const { logs, minLen } = SquashArgumentsSchema.parse(request.params.arguments);
+  const { logs, mode, minLen } = SquashArgumentsSchema.parse(request.params.arguments);
   const lines = logs.split("\n").filter(l => l.trim() !== "");
   
-  const compressor = new LogCompressor(minLen);
+  const compressor = new LogCompressor(minLen, mode as "lossless" | "semantic");
   const { header, compressed } = compressor.compress(lines);
 
   const result = `${header}\nCOMPRESSED LOGS:\n${compressed.join("\n")}`;
@@ -208,7 +208,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("LogSquash v2.0 MCP server running on stdio");
+  console.error("LogSquash v2.1.0 MCP server running on stdio");
 }
 
 main().catch((error) => {

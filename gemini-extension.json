@@ -1,6 +1,6 @@
 {
   "name": "logsquash",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Log compression MCP server for token saving",
   "author": "radoone",
   "license": "MIT",

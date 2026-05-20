@@ -24755,17 +24755,20 @@ var StdioServerTransport = class {
 // src/index.ts
 var LogCompressor = class {
   minLen;
+  mode;
   dictionary = /* @__PURE__ */ new Map();
   reverseDict = /* @__PURE__ */ new Map();
   counter = 0;
-  constructor(minLen = 10) {
+  constructor(minLen = 10, mode = "semantic") {
     this.minLen = minLen;
+    this.mode = mode;
   }
   getNextKey() {
     this.counter++;
     return `#${this.counter}`;
   }
   normalize(line) {
+    if (this.mode === "lossless") return line;
     return line.replace(/\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(,\d+)?Z?/g, "<TS>");
   }
   getLogLevel(line) {
@@ -24834,7 +24837,7 @@ var LogCompressor = class {
           }
         }
       }
-      if (compressed === lastKey && compressed.startsWith("#")) {
+      if (this.mode === "semantic" && compressed === lastKey && compressed.startsWith("#")) {
         repeatCount++;
       } else {
         if (repeatCount > 0) {
@@ -24848,7 +24851,8 @@ var LogCompressor = class {
     if (repeatCount > 0) {
       finalLines[finalLines.length - 1] += ` (repeated ${repeatCount + 1}x)`;
     }
-    let header = "LOG DICTIONARY:\n";
+    let header = `LOG DICTIONARY (Mode: ${this.mode}):
+`;
     this.dictionary.forEach((val, key) => {
       header += `${key}: ${val}
 `;
@@ -24859,7 +24863,7 @@ var LogCompressor = class {
 var server = new Server(
   {
     name: "logsquash",
-    version: "2.0.0"
+    version: "2.1.0"
   },
   {
     capabilities: {
@@ -24869,6 +24873,7 @@ var server = new Server(
 );
 var SquashArgumentsSchema = external_exports.object({
   logs: external_exports.string().describe("The log content to squash"),
+  mode: external_exports.enum(["lossless", "semantic"]).optional().default("semantic").describe("Compression mode: 'lossless' (preserves time/lines) or 'semantic' (max savings)"),
   minLen: external_exports.number().optional().default(10).describe("Minimum pattern length")
 });
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -24876,12 +24881,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "squash_logs",
-        description: "Advanced semantic log compression (v2.0). Uses line aggregation, templates, and priority-based filtering.",
+        description: "Advanced log compression. Choose 'semantic' for max savings or 'lossless' for full precision.",
         inputSchema: {
           type: "object",
           properties: {
             logs: { type: "string" },
-            minLen: { type: "number" }
+            mode: { type: "string", enum: ["lossless", "semantic"], default: "semantic" },
+            minLen: { type: "number", default: 10 }
           },
           required: ["logs"]
         }
@@ -24893,9 +24899,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (request.params.name !== "squash_logs") {
     throw new Error("Unknown tool");
   }
-  const { logs, minLen } = SquashArgumentsSchema.parse(request.params.arguments);
+  const { logs, mode, minLen } = SquashArgumentsSchema.parse(request.params.arguments);
   const lines = logs.split("\n").filter((l) => l.trim() !== "");
-  const compressor = new LogCompressor(minLen);
+  const compressor = new LogCompressor(minLen, mode);
   const { header, compressed } = compressor.compress(lines);
   const result = `${header}
 COMPRESSED LOGS:
@@ -24912,7 +24918,7 @@ ${compressed.join("\n")}`;
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("LogSquash v2.0 MCP server running on stdio");
+  console.error("LogSquash v2.1.0 MCP server running on stdio");
 }
 main().catch((error51) => {
   console.error("Fatal error in main():", error51);
