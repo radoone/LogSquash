@@ -27,6 +27,15 @@ LLM context is expensive and limited. LogSquash identifies patterns and structur
 2. **Template Matching:** Similar lines are parameterized (e.g., `ERROR in #1: #2`).
 3. **Sequential deduplication:** Repeats are summarized into a single line with a counter.
 
+## Lossless vs. Lossy ⚖️
+
+LogSquash is designed for **semantic debugging**, not bit-for-bit archiving.
+
+- **Lossless (Preserved):** All log messages, error strings, function names, and **unique trace identifiers** are kept exactly as they appeared. The logical sequence of events is 100% preserved.
+- **Lossy (Compressed):** Exact **timestamps** are normalized to `<TS>` to allow pattern matching. Individual timing for each entry in a burst (e.g., `repeated 50x`) is summarized.
+
+**Trade-off:** You lose sub-second timing precision but gain **10x more context** history in your LLM session.
+
 ### Example
 
 **Original Logs:**
