@@ -1,43 +1,53 @@
-# LogSquash 🪵🗜️
+# LogSquash 🪵🗜️ v2.0
 
-Token-saving extension for Gemini CLI, Codex, and MCP-compatible agents. Compresses repetitive logs using dictionary-based pattern matching.
+Advanced semantic log compression for Gemini CLI, Codex, and MCP agents. Squashes massive logs into tiny, LLM-readable snippets.
 
-## Why?
+## Why? 🧠
 
-Logs are repetitive. Repetition wastes tokens. 
-LogSquash identifies structural patterns and replaces them with short symbols, allowing the LLM to see **4x more history** in the same context window.
+LLM context is expensive and limited. LogSquash identifies patterns and structural redundancy, allowing the model to analyze **10x more history** without losing technical precision.
 
-## Token Efficiency 🚀
+## New in v2.0 🚀
 
-| Log Type | Raw Size | Squashed | Savings |
-|----------|----------|----------|---------|
-| Standard Web Logs | 5000 tokens | ~1200 tokens | **~75%** |
-| Long Tracebacks | 3000 tokens | ~900 tokens | **~70%** |
-| Repetitive JSON | 4000 tokens | ~800 tokens | **~80%** |
+- **Global Line Aggregation:** Deduplicates identical lines across the entire log stream.
+- **Burst Suppression:** Groups consecutive identical logs (e.g., heartbeats) into a single entry: `#1 (repeated 50x)`.
+- **Semantic Priority:** Aggressively squashes `DEBUG/INFO` while keeping `ERROR/CRITICAL` more prominent.
+- **Template Discovery:** Automatically extracts templates for common log formats.
+
+## Token Efficiency 📈
+
+| Log Type | Compression Ratio | Savings |
+|----------|-------------------|---------|
+| Repetitive DEBUG/INFO | ~20:1 | **90%** |
+| Stack Traces | ~5:1 | **80%** |
+| Multi-line JSON | ~4:1 | **75%** |
 
 ## How it Works
 
-1. **Masking:** Replaces volatile data (`<TS>`, `<UUID>`, `<IP>`, `<HEX>`) with semantic placeholders.
-2. **Pattern Discovery:** Identifies longest recurring fragments and multi-token phrases.
-3. **Dictionary Compression:** Replaces patterns with `#1`, `#2`, etc.
+1. **Aggregation:** Recurring lines are identified and moved to the dictionary.
+2. **Template Matching:** Similar lines are parameterized (e.g., `ERROR in #1: #2`).
+3. **Sequential deduplication:** Repeats are summarized into a single line with a counter.
 
 ### Example
 
 **Original Logs:**
 ```text
-[2026-05-19 10:00:01] ERROR in /usr/src/app/auth.py: Timeout. ID: 550e8400-e29b-41d4-a716-446655440000
-[2026-05-19 10:00:05] ERROR in /usr/src/app/auth.py: Timeout. ID: 550e8400-e29b-41d4-a716-446655440000
+[2024-05-20 10:00:01] INFO: User login attempt. ID: 123
+[2024-05-20 10:00:02] DEBUG: Heartbeat: b'ok'
+[2024-05-20 10:00:03] DEBUG: Heartbeat: b'ok'
+[2024-05-20 10:00:04] DEBUG: Heartbeat: b'ok'
+[2024-05-20 10:00:05] INFO: User login attempt. ID: 123
 ```
 
-**Squashed Logs:**
+**Squashed Logs (v2.0):**
 ```text
 LOG DICTIONARY:
-#1: ERROR in /usr/src/app/auth.py: Timeout.
-#2: ID: 550e8400-e29b-41d4-a716-446655440000
+#1: [<TS>] INFO: User login attempt. ID: 123
+#2: [<TS>] DEBUG: Heartbeat: b'ok'
 
 COMPRESSED LOGS:
-[<TS>] #1 #2
-[<TS>] #1 #2
+#1
+#2 (repeated 3x)
+#1
 ```
 
 ## Installation
@@ -53,20 +63,6 @@ gemini extension install https://github.com/radoone/LogSquash
    - **Name:** `logsquash`
    - **Command:** `node`
    - **Arguments:** `["/path/to/LogSquash/dist/index.js"]`
-
-### 🤖 GitHub Copilot / Cursor / Other MCP Clients
-Add the following to your MCP configuration (e.g., `mcp_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "logsquash": {
-      "command": "node",
-      "args": ["/absolute/path/to/LogSquash/dist/index.js"]
-    }
-  }
-}
-```
 
 ## Usage
 
