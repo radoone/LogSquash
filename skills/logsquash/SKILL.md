@@ -1,16 +1,26 @@
 ---
 name: logsquash
-description: Squash repetitive logs into a dictionary-based compressed format to save tokens. Auto-triggers when the user pastes large logs, asks to analyze logs, or when context limits are reached.
+description: Squash repetitive logs into a dictionary-based compressed format to save tokens. Use /squash or /logsquash to manually trigger.
 ---
 
 # LogSquash 🪵🗜️
 
 This skill allows the agent to compress large, repetitive log files using the LogSquash MCP server. This saves tokens and expands the effective context window.
 
+## Commands
+Recognize and handle the following slash commands:
+- `/squash <logs> [mode=semantic|lossless]`
+- `/logsquash <logs> [mode=semantic|lossless]`
+
 ## Instructions
-1.  **Identify Logs**: Locate the log file or text that needs analysis.
-2.  **Squash**: Call the `squash_logs` tool via the LogSquash MCP server.
+1.  **Trigger**: If the user uses a slash command or asks to "squash" or "analyze logs", call the `squash_logs` tool.
+2.  **Parameter Parsing**:
+    - Extract the log content from the message.
+    - If `mode=lossless` is present, pass `mode: "lossless"` to the tool.
+    - Otherwise, default to `mode: "semantic"`.
 3.  **Analyze**: Use the compressed output (and the provided LOG DICTIONARY) to perform your debugging or analysis task.
 
 ## Example
-"I've squashed the logs to save tokens. Based on the dictionary (#1 = Connection Timeout), I can see that the service failed 50 times in the last hour..."
+User: `/squash [2026-05-19 INFO] ... mode=lossless`
+Agent: *Calls `squash_logs(logs: "...", mode: "lossless")`*
+"I've squashed the logs in lossless mode..."
