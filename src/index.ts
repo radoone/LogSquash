@@ -7,18 +7,16 @@ import {
 import { z } from "zod";
 
 /**
- * LogSquash Compression Logic
+ * LogSquash v2.0 - Advanced Semantic Compression
  */
 class LogCompressor {
   private minLen: number;
-  private minFreq: number;
   private dictionary: Map<string, string> = new Map();
   private reverseDict: Map<string, string> = new Map();
   private counter: number = 0;
 
-  constructor(minLen: number = 10, minFreq: number = 2) {
+  constructor(minLen: number = 10) {
     this.minLen = minLen;
-    this.minFreq = minFreq;
   }
 
   private getNextKey(): string {
@@ -26,23 +24,50 @@ class LogCompressor {
     return `#${this.counter}`;
   }
 
-  private findPatterns(lines: string[]): string[] {
-    const fragmentCounts = new Map<string, number>();
+  private normalize(line: string): string {
+    return line.replace(/\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(,\d+)?Z?/g, "<TS>");
+  }
 
-    for (const line of lines) {
-      // 1. Normalize line (Only mask timestamps to find structural patterns)
-      let normalized = line.replace(/\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(,\d+)?Z?/g, "<TS>");
+  private getLogLevel(line: string): "ERROR" | "DEBUG" | "INFO" | "OTHER" {
+    const upper = line.toUpperCase();
+    if (upper.includes("ERROR") || upper.includes("CRITICAL") || upper.includes("FATAL")) return "ERROR";
+    if (upper.includes("DEBUG")) return "DEBUG";
+    if (upper.includes("INFO")) return "INFO";
+    return "OTHER";
+  }
+
+  public compress(lines: string[]): { header: string; compressed: string[] } {
+    const normalizedLines = lines.map(l => this.normalize(l));
+    const lineFrequencies = new Map<string, number>();
+    
+    // 1. Line Aggregation - Find global duplicates
+    for (const line of normalizedLines) {
+      lineFrequencies.set(line, (lineFrequencies.get(line) || 0) + 1);
+    }
+
+    // Add frequent whole lines to dictionary
+    for (const [line, freq] of lineFrequencies.entries()) {
+      const level = this.getLogLevel(line);
+      const threshold = level === "ERROR" ? 5 : 2; // Be less aggressive with errors
       
-      // 2. Tokenize with delimiters that PRESERVE typical ID characters (-, _, .)
-      // We split on spaces, brackets, pipes, and JSON-structural characters
-      const tokens = normalized.split(/[\s\[\]\|\{\}\"\',:]+/).filter(t => t.length >= this.minLen);
-      for (const token of tokens) {
-        fragmentCounts.set(token, (fragmentCounts.get(token) || 0) + 1);
+      const savings = freq * (line.length - 3) - (line.length + 5);
+      if (freq >= threshold && savings > 20) {
+        if (!this.reverseDict.has(line)) {
+          const key = this.getNextKey();
+          this.dictionary.set(key, line);
+          this.reverseDict.set(line, key);
+        }
       }
+    }
 
-      // 3. Aggressive Phrase Discovery (n-grams from 2 to 5 tokens)
-      // This will catch "ID: <repeating_id>" or "ERROR in /path"
-      const rawTokens = normalized.split(/(\s+|(?=[\[\]\|\{\}\"\',:]+)|(?<=[\[\]\|\{\}\"\',:]+))/).filter(t => t.trim().length > 0);
+    // 2. Template Discovery & Phrase matching (N-grams)
+    // We only look for patterns in what's left after whole-line replacement
+    const fragmentCounts = new Map<string, number>();
+    for (const line of normalizedLines) {
+      if (this.reverseDict.has(line)) continue;
+
+      // Tokenize for structural phrases
+      const rawTokens = line.split(/(\s+|(?=[\[\]\|\{\}\"\',:]+)|(?<=[\[\]\|\{\}\"\',:]+))/).filter(t => t.trim().length > 0);
       for (let len = 2; len <= 5; len++) {
         for (let i = 0; i <= rawTokens.length - len; i++) {
           const phrase = rawTokens.slice(i, i + len).join("");
@@ -53,59 +78,68 @@ class LogCompressor {
       }
     }
 
-    // Filter and sort by length descending
-    return Array.from(fragmentCounts.entries())
-      .filter(([_, freq]) => freq >= this.minFreq)
-      .map(([text]) => text)
-      .sort((a, b) => b.length - a.length);
-  }
+    // Add frequent phrases to dictionary
+    const sortedPhrases = Array.from(fragmentCounts.entries())
+      .filter(([phrase, freq]) => {
+        const savings = freq * (phrase.length - 3) - (phrase.length + 5);
+        return freq >= 2 && savings > 15;
+      })
+      .sort((a, b) => b[0].length - a[0].length);
 
-  public compress(lines: string[]): { header: string; compressed: string[] } {
-    const patterns = this.findPatterns(lines);
-    const finalPatterns: string[] = [];
-    
-    for (const pattern of patterns) {
-      // Calculate efficiency: how much we actually save
-      // frequency * (patternLen - keyLen) - overhead
-      // We estimate keyLen is ~3 chars (#1, #22, etc)
-      // Overhead is the dictionary entry itself: patternLen + 5
-      const freq = this.getFrequency(lines, pattern);
-      const savings = freq * (pattern.length - 3) - (pattern.length + 5);
-      
-      if (savings > 10) { // Only add if we save more than 10 chars
-        if (!this.reverseDict.has(pattern)) {
-          const key = this.getNextKey();
-          this.dictionary.set(key, pattern);
-          this.reverseDict.set(pattern, key);
-          finalPatterns.push(pattern);
-        }
+    for (const [phrase] of sortedPhrases) {
+      if (!this.reverseDict.has(phrase)) {
+        const key = this.getNextKey();
+        this.dictionary.set(key, phrase);
+        this.reverseDict.set(phrase, key);
       }
     }
 
-    const compressedLines = lines.map(line => {
+    // 3. Final Pass - Replace with dictionary keys
+    let lastKey = "";
+    let repeatCount = 0;
+    const finalLines: string[] = [];
+
+    const allPatterns = Array.from(this.reverseDict.keys()).sort((a, b) => b.length - a.length);
+
+    for (const line of normalizedLines) {
       let compressed = line;
-      for (const pattern of finalPatterns) {
-        const key = this.reverseDict.get(pattern)!;
-        compressed = compressed.split(pattern).join(key);
+      // Try whole line first (highest priority)
+      if (this.reverseDict.has(line)) {
+        compressed = this.reverseDict.get(line)!;
+      } else {
+        // Partial replacement
+        for (const pattern of allPatterns) {
+          if (pattern.length < 15) continue; // Don't split lines for small patterns
+          if (compressed.includes(pattern)) {
+            const key = this.reverseDict.get(pattern)!;
+            compressed = compressed.split(pattern).join(key);
+          }
+        }
       }
-      return compressed;
-    });
+
+      // Semantic deduplication (Sequential repeats)
+      if (compressed === lastKey && compressed.startsWith("#")) {
+        repeatCount++;
+      } else {
+        if (repeatCount > 0) {
+          finalLines[finalLines.length - 1] += ` (repeated ${repeatCount + 1}x)`;
+        }
+        finalLines.push(compressed);
+        lastKey = compressed;
+        repeatCount = 0;
+      }
+    }
+    // Handle last line repeat
+    if (repeatCount > 0) {
+      finalLines[finalLines.length - 1] += ` (repeated ${repeatCount + 1}x)`;
+    }
 
     let header = "LOG DICTIONARY:\n";
     this.dictionary.forEach((val, key) => {
       header += `${key}: ${val}\n`;
     });
 
-    return { header, compressed: compressedLines };
-  }
-
-  private getFrequency(lines: string[], pattern: string): number {
-    let count = 0;
-    for (const line of lines) {
-      const parts = line.split(pattern);
-      count += parts.length - 1;
-    }
-    return count;
+    return { header, compressed: finalLines };
   }
 }
 
@@ -115,7 +149,7 @@ class LogCompressor {
 const server = new Server(
   {
     name: "logsquash",
-    version: "1.0.0",
+    version: "2.0.0",
   },
   {
     capabilities: {
@@ -126,8 +160,7 @@ const server = new Server(
 
 const SquashArgumentsSchema = z.object({
   logs: z.string().describe("The log content to squash"),
-  minLen: z.number().optional().default(10).describe("Minimum pattern length to compress"),
-  minFreq: z.number().optional().default(2).describe("Minimum frequency of pattern to compress"),
+  minLen: z.number().optional().default(10).describe("Minimum pattern length"),
 });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -135,13 +168,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "squash_logs",
-        description: "Squash repetitive logs into a dictionary-based compressed format to save tokens.",
+        description: "Advanced semantic log compression (v2.0). Uses line aggregation, templates, and priority-based filtering.",
         inputSchema: {
           type: "object",
           properties: {
             logs: { type: "string" },
             minLen: { type: "number" },
-            minFreq: { type: "number" },
           },
           required: ["logs"],
         },
@@ -155,10 +187,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     throw new Error("Unknown tool");
   }
 
-  const { logs, minLen, minFreq } = SquashArgumentsSchema.parse(request.params.arguments);
+  const { logs, minLen } = SquashArgumentsSchema.parse(request.params.arguments);
   const lines = logs.split("\n").filter(l => l.trim() !== "");
   
-  const compressor = new LogCompressor(minLen, minFreq);
+  const compressor = new LogCompressor(minLen);
   const { header, compressed } = compressor.compress(lines);
 
   const result = `${header}\nCOMPRESSED LOGS:\n${compressed.join("\n")}`;
@@ -176,7 +208,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("LogSquash MCP server running on stdio");
+  console.error("LogSquash v2.0 MCP server running on stdio");
 }
 
 main().catch((error) => {
