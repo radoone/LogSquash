@@ -153,6 +153,28 @@ def squash_logs(
     - 'semantic' (default): Aggressively compresses logs, normalizes timestamps to <TS>, and groups sequential repeats. Recommended for general troubleshooting.
     - 'lossless': Collapses repetitive structural patterns but preserves timestamps, exact line boundaries, and order. Best for auditing and timing analysis.
     """
+    import os
+    expected_key = os.getenv("LOGSQUASH_API_KEY")
+    if expected_key:
+        try:
+            from fastmcp.server.dependencies import get_http_headers
+            headers = get_http_headers() or {}
+        except ImportError:
+            headers = {}
+        
+        headers_lower = {k.lower(): v for k, v in headers.items()}
+        auth_header = headers_lower.get("authorization")
+        api_key_header = headers_lower.get("x-api-key")
+        
+        authorized = False
+        if auth_header == f"Bearer {expected_key}":
+            authorized = True
+        elif api_key_header == expected_key:
+            authorized = True
+            
+        if not authorized:
+            return f"Error: Unauthorized. Missing or invalid LOGSQUASH_API_KEY in Authorization or X-API-Key header."
+
     lines = [l for l in logs.split("\n") if l.strip() != ""]
     if not lines:
         return "No logs to squash."

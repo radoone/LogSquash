@@ -8,7 +8,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code and logs
 COPY server.py .
-COPY data/data/state_store.db/ ./data/state_store.db/
 
 # Expose port (Cloud Run sets PORT environment variable, defaults to 8080)
 EXPOSE 8080

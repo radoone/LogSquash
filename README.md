@@ -118,13 +118,57 @@ LogSquash is ready to be deployed to **Google Cloud Run** using the provided `Do
    gcloud auth login
    gcloud config set project YOUR_PROJECT_ID
    ```
-2. Deploy the service directly from the source directory (Cloud Run will build the container automatically using the `Dockerfile`):
+2. Deploy the service directly from the source directory, setting your shared API key via the `LOGSQUASH_API_KEY` environment variable:
    ```bash
    gcloud run deploy logsquash \
      --source . \
      --platform managed \
-     --region us-central1 \
-     --no-allow-unauthenticated
+     --region europe-west3 \
+     --set-env-vars="LOGSQUASH_API_KEY=YOUR_SECRET_KEY" \
+     --allow-unauthenticated
    ```
-   *Note: Using `--no-allow-unauthenticated` is highly recommended for security to ensure only authenticated users/services (e.g. via GCP IAM) can access your MCP tools.*
+   *Note: Using `--allow-unauthenticated` makes the HTTP endpoint publicly accessible, but the Python application code itself will block any requests that do not provide the correct key.*
+
+### How Clients Connect using the API Key:
+
+#### In Python scripts:
+To prevent header processing/stripping issues on intermediate gateways, pass the key as a custom `X-API-Key` header:
+```python
+from fastmcp import Client
+from fastmcp.client.transports.http import StreamableHttpTransport
+
+transport = StreamableHttpTransport(
+    "https://YOUR_SERVICE_URL/mcp",
+    headers={"X-API-Key": "YOUR_SECRET_KEY"}
+)
+client = Client(transport)
+
+async with client:
+    res = await client.call_tool("squash_logs", {"logs": "...log data..."})
+```
+
+#### In Cursor:
+1. Open **Cursor Settings > Features > MCP**.
+2. Click **+ Add New MCP Server**.
+3. Fill in:
+   - **Name**: `logsquash`
+   - **Type**: `SSE` (or `HTTP` depending on your version)
+   - **URL**: `https://YOUR_SERVICE_URL/mcp`
+4. Add Header:
+   - **Key**: `X-API-Key`
+   - **Value**: `YOUR_SECRET_KEY`
+
+#### In Claude Desktop (`claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "logsquash": {
+      "url": "https://YOUR_SERVICE_URL/mcp",
+      "headers": {
+        "X-API-Key": "YOUR_SECRET_KEY"
+      }
+    }
+  }
+}
+```
 
