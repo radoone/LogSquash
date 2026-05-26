@@ -142,7 +142,17 @@ def squash_logs(
     min_len: Annotated[int, "Minimum pattern length"] = 10,
     minLen: Annotated[Optional[int], "Minimum pattern length (alias for backward compatibility)"] = None
 ) -> str:
-    """Advanced log compression. Choose 'semantic' for max savings or 'lossless' for full precision."""
+    """Compresses massive, repetitive log streams to save LLM context tokens.
+    
+    Use this tool whenever you receive large log datasets (such as build outputs, test logs, 
+    web server access logs, database traces, or syslogs) before analyzing or processing them. 
+    Compression reduces context token usage by up to 95% while keeping errors and critical 
+    diagnostics fully readable and prominent.
+    
+    Modes:
+    - 'semantic' (default): Aggressively compresses logs, normalizes timestamps to <TS>, and groups sequential repeats. Recommended for general troubleshooting.
+    - 'lossless': Collapses repetitive structural patterns but preserves timestamps, exact line boundaries, and order. Best for auditing and timing analysis.
+    """
     lines = [l for l in logs.split("\n") if l.strip() != ""]
     if not lines:
         return "No logs to squash."
