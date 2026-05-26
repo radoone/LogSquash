@@ -156,3 +156,12 @@ def squash_logs(
     
     compressed_str = "\n".join(compressed)
     return f"{header}\nCOMPRESSED LOGS:\n{compressed_str}"
+
+
+if __name__ == "__main__":
+    import os
+    port = int(os.getenv("PORT", "8080"))
+    if "PORT" in os.environ:
+        mcp.run(transport="streamable-http", host="0.0.0.0", port=port)
+    else:
+        mcp.run(transport="stdio")

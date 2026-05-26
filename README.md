@@ -105,3 +105,26 @@ This server is optimized to run as a hosted MCP server on [Prefect Horizon](http
    server.py:mcp
    ```
 5. Deploy! Horizon will build your server, configure secure authentication, and provide a live MCP endpoint.
+
+---
+
+## Deployment on Google Cloud Run ☁️
+
+LogSquash is ready to be deployed to **Google Cloud Run** using the provided `Dockerfile`. Under Cloud Run, the server automatically detects the `PORT` environment variable and runs using the recommended `"streamable-http"` transport.
+
+### Steps to Deploy:
+1. Make sure you have the [Google Cloud SDK](https://cloud.google.com/sdk) installed and authenticated:
+   ```bash
+   gcloud auth login
+   gcloud config set project YOUR_PROJECT_ID
+   ```
+2. Deploy the service directly from the source directory (Cloud Run will build the container automatically using the `Dockerfile`):
+   ```bash
+   gcloud run deploy logsquash \
+     --source . \
+     --platform managed \
+     --region us-central1 \
+     --no-allow-unauthenticated
+   ```
+   *Note: Using `--no-allow-unauthenticated` is highly recommended for security to ensure only authenticated users/services (e.g. via GCP IAM) can access your MCP tools.*
+
