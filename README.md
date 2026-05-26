@@ -93,20 +93,7 @@ We benchmarked the Python FastMCP LogSquash implementation under real-world cond
 
 ---
 
-## Deployment on Prefect Horizon 🤖
 
-This server is optimized to run as a hosted MCP server on [Prefect Horizon](https://horizon.prefect.io/):
-
-1. Push your repository containing `server.py` and `requirements.txt` to GitHub.
-2. Sign in at [horizon.prefect.io](https://horizon.prefect.io/).
-3. Connect your repository.
-4. Set the **Server Entrypoint** to:
-   ```text
-   server.py:mcp
-   ```
-5. Deploy! Horizon will build your server, configure secure authentication, and provide a live MCP endpoint.
-
----
 
 ## Deployment on Google Cloud Run ☁️
 
