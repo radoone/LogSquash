@@ -17,7 +17,20 @@ class LogCompressor:
     def normalize(self, line: str) -> str:
         if self.mode == "lossless":
             return line
-        return re.sub(r'\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(,\d+)?Z?', '<TS>', line)
+        
+        # 1. Standard ISO-like: 2026-05-26T20:59:01.123Z or 2026-05-26 20:59:01,123
+        line = re.sub(r'\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}([\.,]\d+)?Z?', '<TS>', line)
+        
+        # 2. Nginx/Apache access log timestamp: 26/May/2026:20:59:01 +0200
+        line = re.sub(r'\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}(?:\s+[+-]\d{4})?', '<TS>', line)
+        
+        # 3. HDFS timestamp: 081109 203518
+        line = re.sub(r'\b\d{6}\s+\d{6}\b', '<TS>', line)
+        
+        # 4. Syslog timestamp: May 26 20:59:01
+        line = re.sub(r'\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\b', '<TS>', line)
+        
+        return line
 
     def get_log_level(self, line: str) -> Literal["ERROR", "DEBUG", "INFO", "OTHER"]:
         upper = line.upper()
@@ -49,21 +62,21 @@ class LogCompressor:
                     self.dictionary[key] = line
                     self.reverse_dict[line] = key
 
-        # 2. Template Discovery & Phrase matching (N-grams)
+        # 2. Template Discovery & Phrase matching (N-grams with preserved spaces)
         fragment_counts: Dict[str, int] = {}
         for line in normalized_lines:
             if line in self.reverse_dict:
                 continue
 
-            raw_tokens = [
-                t for t in re.split(
-                    r'(\s+|(?=[\[\]\|\{\}\"\',:])|(?<=[\[\]\|\{\}\"\',:]))',
-                    line
-                ) if t and t.strip()
-            ]
+            # Tokenize keeping spaces and separators
+            tokens = [t for t in re.split(r'(\s+|(?=[\[\]\|\{\}\"\',:])|(?<=[\[\]\|\{\}\"\',:]))', line) if t]
+            meaningful_indices = [i for i, t in enumerate(tokens) if t.strip()]
+            
             for length in range(2, 6):
-                for i in range(len(raw_tokens) - length + 1):
-                    phrase = "".join(raw_tokens[i:i + length])
+                for j in range(len(meaningful_indices) - length + 1):
+                    start_tok_idx = meaningful_indices[j]
+                    end_tok_idx = meaningful_indices[j + length - 1]
+                    phrase = "".join(tokens[start_tok_idx : end_tok_idx + 1])
                     if len(phrase.strip()) >= self.min_len:
                         fragment_counts[phrase] = fragment_counts.get(phrase, 0) + 1
 
