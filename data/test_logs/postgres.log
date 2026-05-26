@@ -1,0 +1,6 @@
+2026-05-26 20:59:01.123 CEST [54321] postgres@app_db LOG:  duration: 1.234 ms  statement: SELECT * FROM users WHERE id = 101
+2026-05-26 20:59:01.125 CEST [54321] postgres@app_db LOG:  duration: 0.852 ms  statement: SELECT * FROM profiles WHERE user_id = 101
+2026-05-26 20:59:02.100 CEST [54322] postgres@app_db LOG:  duration: 15.610 ms  statement: UPDATE sessions SET last_active = NOW() WHERE token = 'sess_09a8f1'
+2026-05-26 20:59:02.105 CEST [54321] postgres@app_db LOG:  duration: 1.102 ms  statement: SELECT * FROM users WHERE id = 102
+2026-05-26 20:59:02.108 CEST [54321] postgres@app_db LOG:  duration: 0.741 ms  statement: SELECT * FROM profiles WHERE user_id = 102
+2026-05-26 20:59:03.200 CEST [54322] postgres@app_db LOG:  duration: 14.882 ms  statement: UPDATE sessions SET last_active = NOW() WHERE token = 'sess_12f8a3'

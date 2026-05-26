@@ -1,0 +1,7 @@
+{"timestamp":"2026-05-26T20:59:01.001Z","level":"INFO","service":"auth-service","traceId":"tr-921820","message":"User verification started","userId":"user-8291"}
+{"timestamp":"2026-05-26T20:59:01.005Z","level":"DEBUG","service":"auth-service","traceId":"tr-921820","message":"Checking cache for user","userId":"user-8291"}
+{"timestamp":"2026-05-26T20:59:01.010Z","level":"INFO","service":"auth-service","traceId":"tr-921820","message":"Cache miss. Querying DB","userId":"user-8291"}
+{"timestamp":"2026-05-26T20:59:01.012Z","level":"ERROR","service":"auth-service","traceId":"tr-921820","message":"Failed to connect to database at db.internal:5432","error":"Connection timeout"}
+{"timestamp":"2026-05-26T20:59:02.001Z","level":"INFO","service":"auth-service","traceId":"tr-921821","message":"User verification started","userId":"user-8292"}
+{"timestamp":"2026-05-26T20:59:02.003Z","level":"DEBUG","service":"auth-service","traceId":"tr-921821","message":"Checking cache for user","userId":"user-8292"}
+{"timestamp":"2026-05-26T20:59:02.004Z","level":"INFO","service":"auth-service","traceId":"tr-921821","message":"Cache hit. Verification success","userId":"user-8292"}

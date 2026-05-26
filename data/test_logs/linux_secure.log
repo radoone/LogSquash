@@ -1,0 +1,6 @@
+May 26 20:59:01 hostname sshd[12345]: pam_unix(sshd:session): session opened for user root by (uid=0)
+May 26 20:59:02 hostname sshd[12345]: Accepted publickey for root from 192.168.1.50 port 53210 ssh2: RSA SHA256:d8a29a8f...
+May 26 20:59:05 hostname sshd[12348]: pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=192.168.1.100  user=admin
+May 26 20:59:07 hostname sshd[12348]: Failed password for admin from 192.168.1.100 port 49201 ssh2
+May 26 20:59:10 hostname sshd[12348]: Connection closed by authenticating user admin 192.168.1.100 port 49201 [preauth]
+May 26 20:59:12 hostname sshd[12352]: pam_unix(sshd:session): session opened for user root by (uid=0)
