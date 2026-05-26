@@ -5,3 +5,4 @@
 {"timestamp":"2026-05-26T20:59:02.001Z","level":"INFO","service":"auth-service","traceId":"tr-921821","message":"User verification started","userId":"user-8292"}
 {"timestamp":"2026-05-26T20:59:02.003Z","level":"DEBUG","service":"auth-service","traceId":"tr-921821","message":"Checking cache for user","userId":"user-8292"}
 {"timestamp":"2026-05-26T20:59:02.004Z","level":"INFO","service":"auth-service","traceId":"tr-921821","message":"Cache hit. Verification success","userId":"user-8292"}
+{"timestamp":"2026-05-26T20:59:03.001Z","level":"FATAL","service":"gateway-service","traceId":"tr-921822","message":"System panic: nil pointer dereference at auth.go:124","stack_trace":"runtime.panic(...) auth.verifyUser(...)"}

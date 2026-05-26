@@ -12,3 +12,5 @@
 192.168.1.10 - - [26/May/2026:20:59:30 +0200] "GET /api/v1/health HTTP/1.1" 200 45 "-" "kube-probe/1.24"
 192.168.1.15 - - [26/May/2026:20:59:31 +0200] "GET /api/v1/data HTTP/1.1" 200 854 "https://example.com/index.html" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 192.168.1.10 - - [26/May/2026:20:59:35 +0200] "GET /api/v1/health HTTP/1.1" 200 45 "-" "kube-probe/1.24"
+192.168.1.15 - - [26/May/2026:20:59:40 +0200] "GET /api/v1/checkout HTTP/1.1" 500 2403 "https://example.com/checkout" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+192.168.1.15 - - [26/May/2026:20:59:41 +0200] "GET /api/v1/checkout HTTP/1.1" 500 2403 "https://example.com/checkout" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
