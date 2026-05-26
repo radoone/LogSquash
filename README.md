@@ -145,12 +145,12 @@ async with client:
    - **Key**: `X-API-Key`
    - **Value**: `YOUR_SECRET_KEY`
 
-#### In Claude Desktop (`claude_desktop_config.json`):
+#### In Gemini / Google Client (`mcp_config.json`):
 ```json
 {
   "mcpServers": {
     "logsquash": {
-      "url": "https://YOUR_SERVICE_URL/mcp",
+      "serverUrl": "https://YOUR_SERVICE_URL/mcp",
       "headers": {
         "X-API-Key": "YOUR_SECRET_KEY"
       }
