@@ -1,9 +1,13 @@
+import ast
+import json
 import re
-from typing import Dict, List, Tuple, Literal, Annotated, Optional
+from typing import Dict, List, Tuple, Literal, Annotated, Any
 from fastmcp import FastMCP
 
+DEFAULT_MIN_LEN = 10
+
 class LogCompressor:
-    def __init__(self, min_len: int = 10, mode: Literal["lossless", "semantic"] = "semantic"):
+    def __init__(self, min_len: int = DEFAULT_MIN_LEN, mode: Literal["lossless", "semantic"] = "semantic"):
         self.min_len = min_len
         self.mode = mode
         self.dictionary: Dict[str, str] = {}
@@ -29,8 +33,66 @@ class LogCompressor:
         
         # 4. Syslog timestamp: May 26 20:59:01
         line = re.sub(r'\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\b', '<TS>', line)
-        
+
+        line = self.normalize_dynamic_values(line)
+        line = self.normalize_structured_context(line)
         return line
+
+    def normalize_dynamic_values(self, line: str) -> str:
+        """Collapse high-cardinality values that rarely help root-cause analysis."""
+        line = re.sub(r'\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b', '<UUID>', line, flags=re.I)
+        line = re.sub(r'\b[0-9a-f]{16,}\b', '<HEX>', line, flags=re.I)
+        line = re.sub(r'\bprocess \[\d+\]', 'process [<PID>]', line)
+        line = re.sub(r'\bin \d+(?:\.\d+)? seconds\b', 'in <DURATION> seconds', line)
+        line = re.sub(r'\bapi-version=\d{4}-\d{2}-\d{2}(?:-[A-Za-z0-9-]+)?', 'api-version=<API_VERSION>', line)
+        line = re.sub(r'\bikey=[A-Za-z0-9-]+', 'ikey=<KEY>', line)
+        return line
+
+    def normalize_structured_context(self, line: str) -> str:
+        if " | " not in line:
+            return line
+
+        prefix, suffix = line.rsplit(" | ", 1)
+        suffix = suffix.strip()
+        parsed: Any
+
+        try:
+            if suffix.startswith("{") and suffix.endswith("}"):
+                parsed = ast.literal_eval(suffix)
+            else:
+                parsed = json.loads(suffix)
+        except (ValueError, SyntaxError, json.JSONDecodeError):
+            return line
+
+        if not isinstance(parsed, dict):
+            return line
+
+        common_keys = {"taskName", "trace_id", "span_id"}
+        if not common_keys.intersection(parsed):
+            return line
+
+        task = parsed.get("taskName")
+        trace = parsed.get("trace_id")
+        span = parsed.get("span_id")
+        extras = {k: v for k, v in parsed.items() if k not in common_keys and v is not None}
+
+        if task is None and trace is None and span is None and not extras:
+            return f"{prefix} | <CTX:none>"
+
+        parts: List[str] = []
+        if task is not None:
+            parts.append(f"task={task}")
+        if trace is not None:
+            parts.append("trace=<TRACE>")
+        if span is not None:
+            parts.append("span=<SPAN>")
+        for key in sorted(extras):
+            value = extras[key]
+            if isinstance(value, str) and len(value) > 32:
+                value = "<STR>"
+            parts.append(f"{key}={value}")
+
+        return f"{prefix} | <CTX:{','.join(parts) or 'none'}>"
 
     def get_log_level(self, line: str) -> Literal["ERROR", "DEBUG", "INFO", "OTHER"]:
         upper = line.upper()
@@ -62,28 +124,24 @@ class LogCompressor:
                     self.dictionary[key] = line
                     self.reverse_dict[line] = key
 
-        # 2. Template Discovery & Phrase matching (N-grams with preserved spaces)
+        # 2. Boundary-safe segment discovery. Avoid arbitrary n-grams because
+        # they create unreadable dictionary entries from the middle of URLs/loggers.
         fragment_counts: Dict[str, int] = {}
         for line in normalized_lines:
             if line in self.reverse_dict:
                 continue
 
-            # Tokenize keeping spaces and separators
-            tokens = [t for t in re.split(r'(\s+|(?=[\[\]\|\{\}\"\',:])|(?<=[\[\]\|\{\}\"\',:]))', line) if t]
-            meaningful_indices = [i for i, t in enumerate(tokens) if t.strip()]
-            
-            for length in range(2, 6):
-                for j in range(len(meaningful_indices) - length + 1):
-                    start_tok_idx = meaningful_indices[j]
-                    end_tok_idx = meaningful_indices[j + length - 1]
-                    phrase = "".join(tokens[start_tok_idx : end_tok_idx + 1])
-                    if len(phrase.strip()) >= self.min_len:
-                        fragment_counts[phrase] = fragment_counts.get(phrase, 0) + 1
+            for phrase in self.extract_boundary_phrases(line):
+                fragment_counts[phrase] = fragment_counts.get(phrase, 0) + 1
 
         # Add frequent phrases to dictionary
         sorted_phrases = [
             (phrase, freq) for phrase, freq in fragment_counts.items()
-            if freq >= 2 and (freq * (len(phrase) - 3) - (len(phrase) + 5)) > 15
+            if (
+                freq >= 2
+                and len(phrase) >= 15
+                and (freq * (len(phrase) - 3) - (len(phrase) + 5)) > 15
+            )
         ]
         sorted_phrases.sort(key=lambda item: len(item[0]), reverse=True)
 
@@ -131,6 +189,33 @@ class LogCompressor:
 
         return header, final_lines
 
+    def extract_boundary_phrases(self, line: str) -> List[str]:
+        phrases: List[str] = []
+
+        # Structured context tails are safe and often repeated on every line.
+        if " | " in line:
+            tail = " | " + line.rsplit(" | ", 1)[1]
+            if len(tail.strip()) >= self.min_len:
+                phrases.append(tail)
+
+        # In lossless mode, keep the original timestamp in place but allow the
+        # repeated logger/message tail to be dictionary-compressed.
+        if self.mode == "lossless":
+            match = re.match(r'^\[[^\]]+? - (.+)$', line)
+            if match:
+                header_tail = match.group(1)
+                if len(header_tail.strip()) >= self.min_len:
+                    phrases.append(header_tail)
+
+        # Repeated message bodies after the logger header.
+        match = re.match(r'^\[(?:<TS>|[^\]]+?) - [^\]]+\]\s+(.*)$', line)
+        if match:
+            message = match.group(1)
+            if len(message.strip()) >= self.min_len:
+                phrases.append(message)
+
+        return phrases
+
 
 # Initialize FastMCP Server
 mcp = FastMCP("logsquash")
@@ -138,9 +223,8 @@ mcp = FastMCP("logsquash")
 @mcp.tool()
 def squash_logs(
     logs: Annotated[str, "The log content to squash"],
-    mode: Annotated[str, "Compression mode: 'lossless' (preserves time/lines) or 'semantic' (max savings)"] = "semantic",
-    min_len: Annotated[int, "Minimum pattern length"] = 10,
-    minLen: Annotated[Optional[int], "Minimum pattern length (alias for backward compatibility)"] = None
+    mode: Annotated[str, "Compression mode. Use 'semantic' for troubleshooting, summarization, and maximum compression. Use 'lossless' for audits, exact event timelines, forensic analysis, or when every original value and line must remain reconstructable."] = "semantic",
+    min_len: Annotated[int, "Minimum pattern length. Default 10 is recommended for maximum semantic compression."] = DEFAULT_MIN_LEN,
 ) -> str:
     """Compresses massive, repetitive log streams to save LLM context tokens.
     
@@ -150,8 +234,8 @@ def squash_logs(
     diagnostics fully readable and prominent.
     
     Modes:
-    - 'semantic' (default): Aggressively compresses logs, normalizes timestamps to <TS>, and groups sequential repeats. Recommended for general troubleshooting.
-    - 'lossless': Collapses repetitive structural patterns but preserves timestamps, exact line boundaries, and order. Best for auditing and timing analysis.
+    - 'semantic' (default): Best for debugging, root-cause analysis, summaries, agent handoffs, and any situation where the goal is to understand what happened with maximum compression. It normalizes noisy values such as timestamps, trace/span metadata, PIDs, API keys, durations, and repeated structured context while keeping errors and important messages readable.
+    - 'lossless': Best for audits, compliance, forensic analysis, exact timing analysis, reproducing event order, or comparing original values. It avoids semantic normalization so timestamps, IDs, metadata fields, line boundaries, and original values remain preserved as much as possible.
     """
     import os
     expected_key = os.getenv("LOGSQUASH_API_KEY")
@@ -182,8 +266,7 @@ def squash_logs(
     if mode not in ("lossless", "semantic"):
         mode = "semantic"
         
-    effective_min_len = minLen if minLen is not None else min_len
-    compressor = LogCompressor(min_len=effective_min_len, mode=mode)  # type: ignore
+    compressor = LogCompressor(min_len=min_len, mode=mode)  # type: ignore
     header, compressed = compressor.compress(lines)
     
     compressed_str = "\n".join(compressed)

@@ -2,7 +2,7 @@ import os
 import re
 import time
 from typing import Dict, List, Tuple, Literal
-from server import LogCompressor
+from server import DEFAULT_MIN_LEN, LogCompressor
 
 TEST_LOGS_DIR = "data/test_logs"
 
@@ -32,6 +32,10 @@ def make_unique_timestamps(filename: str, lines: List[str]) -> List[str]:
         elif filename == "postgres.log":
             timestamp = f"2026-05-26 20:{minute:02d}:{second:02d}.{i:03d} CEST"
             line = re.sub(r'^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?\s+[A-Z]{3,4}', timestamp, line)
+            
+        elif filename == "python_app_observability.log":
+            timestamp = f"2026-05-19 14:{minute:02d}:{second:02d}"
+            line = re.sub(r'\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}', timestamp, line, count=1)
             
         processed_lines.append(line)
         
@@ -67,7 +71,7 @@ def run_tests():
         
         # Run semantic mode
         start = time.perf_counter()
-        compressor = LogCompressor(min_len=10, mode="semantic")
+        compressor = LogCompressor(min_len=DEFAULT_MIN_LEN, mode="semantic")
         h, c = compressor.compress(test_lines)
         t = (time.perf_counter() - start) * 1000
         comp_size = len("\n".join(c)) + len(h)
@@ -76,7 +80,7 @@ def run_tests():
         
         # Run lossless mode
         start = time.perf_counter()
-        compressor_loss = LogCompressor(min_len=10, mode="lossless")
+        compressor_loss = LogCompressor(min_len=DEFAULT_MIN_LEN, mode="lossless")
         h_loss, c_loss = compressor_loss.compress(test_lines)
         t_loss = (time.perf_counter() - start) * 1000
         comp_size_loss = len("\n".join(c_loss)) + len(h_loss)

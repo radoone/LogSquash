@@ -7,11 +7,11 @@ Advanced semantic log compression built with **FastMCP** for AI agents (Gemini, 
 ## Features 🚀
 
 - **Semantic Priority**: Critical error logs (`ERROR`, `FATAL`, `CRITICAL`) remain fully readable and inline, while repetitive debug/info logs are squashed into the dictionary.
-- **Space-Preserving Template Discovery**: Identifies repetitive structural phrases (N-grams) while preserving whitespaces and delimiters for maximum replacement accuracy.
+- **Boundary-Safe Template Discovery**: Identifies repetitive whole-line and structured log segments without replacing arbitrary fragments from the middle of URLs, logger names, or metadata fields.
 - **Multi-Format Timestamp Normalization**: Automatically normalizes diverse production log timestamp formats (ISO-8601, Nginx/Apache, HDFS, Syslog) to `<TS>` in `semantic` mode.
 - **Multi-Mode Compression**:
-  - `semantic` (default): Max savings (up to **95%+**), replaces timestamps with `<TS>`, groups repeated lines, collapses structural redundancy.
-  - `lossless`: Full precision (~40-50% savings), preserves exact timing and all line boundaries.
+  - `semantic` (default): Max savings (typically **90-95%+** on repetitive logs), normalizes timestamps, IDs, process IDs, durations, trace/span context, and other noisy values while keeping errors readable.
+  - `lossless`: Use for audits, forensics, exact event timelines, or value-by-value comparison where original timestamps and metadata must be preserved.
 
 ---
 
@@ -58,17 +58,20 @@ COMPRESSED LOGS:
 
 ## Performance & Compression Benchmarks 📊
 
-We benchmarked the Python FastMCP LogSquash implementation under real-world conditions where each log entry contains a **unique timestamp** but logs follow standard templates (tested with 200 entries per format):
+We benchmarked the Python FastMCP LogSquash implementation under real-world conditions where each log entry contains a **unique timestamp** but logs follow standard templates (tested with 200 entries per format). Approximate token savings track character savings closely for log-heavy text, so a 90% character reduction is usually close to a 90% token reduction for LLM context budgeting.
 
-| Log File Format | Mode | Original Size | Compressed Size | Savings % | Execution Time |
+| Log File Format | Mode | Original Size | Compressed Size | Approx. Token Savings | Execution Time |
 |---|---|---|---|---|---|
-| **HDFS Logs** | `semantic` | 25,599 ch | 1,365 ch | **94.67%** | 1.49 ms |
-| **Linux Syslog** | `semantic` | 23,292 ch | 1,289 ch | **94.47%** | 1.29 ms |
-| **Microservice JSON** | `semantic` | 34,924 ch | 1,901 ch | **94.56%** | 1.54 ms |
-| **Nginx Access** | `semantic` | 28,469 ch | 2,361 ch | **91.71%** | 1.52 ms |
-| **PostgreSQL LOG** | `semantic` | 27,779 ch | 1,376 ch | **95.05%** | 1.27 ms |
+| **HDFS Logs** | `semantic` | 25,599 ch | 1,337 ch | **94.78%** | 3.22 ms |
+| **Linux Syslog** | `semantic` | 23,292 ch | 1,289 ch | **94.47%** | 2.86 ms |
+| **Microservice JSON** | `semantic` | 34,924 ch | 1,901 ch | **94.56%** | 3.26 ms |
+| **Nginx Access** | `semantic` | 28,469 ch | 2,361 ch | **91.71%** | 3.18 ms |
+| **PostgreSQL LOG** | `semantic` | 27,779 ch | 1,376 ch | **95.05%** | 2.85 ms |
+| **Python App Observability** | `semantic` | 35,955 ch | 2,914 ch | **91.90%** | 5.86 ms |
 
-*In `lossless` mode, LogSquash achieves **~40-50% savings** on structured log formats by collapsing repetitive templates without normalizing timestamps.*
+`semantic` mode is the right default for troubleshooting, summaries, root-cause analysis, and agent handoffs. Use `lossless` when exact timestamps, IDs, metadata values, and original line content matter more than maximum compression.
+
+Lossless mode intentionally compresses less because it preserves original timestamps and high-cardinality values. On the anonymized Python observability log, boundary-safe lossless compression still reduces **35,955 ch** to **11,184 ch** (**68.89%** savings) by dictionary-compressing repeated logger/message tails while leaving exact timestamps in place.
 
 ---
 
@@ -158,4 +161,3 @@ async with client:
   }
 }
 ```
-

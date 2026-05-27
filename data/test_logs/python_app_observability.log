@@ -1,0 +1,18 @@
+[2026-05-19 14:25:56 - AppCore - INFO] Configuring Azure Monitor with Agent Framework instrumentation | {'taskName': None, 'trace_id': None, 'span_id': None}
+[2026-05-19 14:25:56 - AppCore - DEBUG] TracerProvider before configure_azure_monitor | {'taskName': None, 'tracer_provider': 'ProxyTracerProvider', 'processors': [], 'trace_id': None, 'span_id': None}
+[2026-05-19 14:25:56 - AppCore - DEBUG] Calling configure_azure_monitor() | {'taskName': None, 'trace_id': None, 'span_id': None}
+[2026-05-19 14:25:56 - urllib3.connectionpool - DEBUG] Starting new HTTP connection (1): 169.254.169.254:80 | {'taskName': None, 'trace_id': None, 'span_id': None}
+[2026-05-19 14:25:56 - urllib3.connectionpool - DEBUG] Starting new HTTPS connection (1): westus-0.in.applicationinsights.azure.com:443 | {'taskName': None, 'trace_id': None, 'span_id': None}
+[2026-05-19 14:25:58 - urllib3.connectionpool - DEBUG] https://westus-0.in.applicationinsights.azure.com:443 "POST /v2.1/track HTTP/1.1" 200 None | {'taskName': None, 'trace_id': None, 'span_id': None}
+[2026-05-19 14:25:58 - azure.ai.projects.telemetry._ai_project_instrumentor - WARNING] GenAI tracing is not enabled. Set environment variable AZURE_EXPERIMENTAL_ENABLE_GENAI_TRACING=true to enable this experimental feature. | {'taskName': None, 'trace_id': None, 'span_id': None}
+[2026-05-19 14:25:58 - AppCore - INFO] config: source=repo: /workspace/app/configs/infrastructure.yaml + /workspace/app/configs/genai.yaml | {'taskName': None, 'trace_id': None, 'span_id': None}
+[2026-05-19 14:25:58 - uvicorn - INFO] Started server process [16197] | {'taskName': 'Task-1', 'color_message': 'Started server process [\\x1b[36m%d\\x1b[0m]', 'trace_id': None, 'span_id': None}
+[2026-05-19 14:25:58 - uvicorn - INFO] Waiting for application startup. | {'taskName': 'Task-1', 'trace_id': None, 'span_id': None}
+[2026-05-19 14:25:59 - urllib3.connectionpool - DEBUG] https://eastus.livediagnostics.monitor.azure.com:443 "POST /QuickPulseService.svc/ping?api-version=2024-04-01-preview&ikey=00000000-0000-0000-0000-000000000000 HTTP/1.1" 200 0 | {'taskName': None, 'trace_id': None, 'span_id': None}
+[2026-05-19 14:26:00 - AppCore - INFO] Cosmos containers verified/created | {'taskName': 'Task-2', 'trace_id': None, 'span_id': None}
+[2026-05-19 14:26:00 - AppCore - INFO] Attachment storage initialized (lazy container prepare) | {'taskName': 'Task-2', 'trace_id': None, 'span_id': None}
+[2026-05-19 14:26:00 - AppCore - INFO] Created tool 'agent-handoff' of type 'custom' | {'taskName': 'Task-2', 'trace_id': None, 'span_id': None}
+[2026-05-19 14:26:00 - apscheduler.scheduler - INFO] Added job "InactivityMonitor.tick" to job store "default" | {'taskName': 'Task-2', 'trace_id': None, 'span_id': None}
+[2026-05-19 14:26:00 - apscheduler.scheduler - DEBUG] Next wakeup is due at 2026-05-19 13:00:00+00:00 (in 2039.696852 seconds) | {'taskName': None, 'trace_id': None, 'span_id': None}
+[2026-05-19 14:26:00 - uvicorn - ERROR] [Errno 48] error while attempting to bind on address ('0.0.0.0', 8000): address already in use | {'taskName': 'Task-1', 'trace_id': None, 'span_id': None}
+[2026-05-19 14:26:00 - AppCore - INFO] Application stopped. | {'taskName': None, 'trace_id': None, 'span_id': None}

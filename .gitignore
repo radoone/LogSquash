@@ -3,8 +3,8 @@ src/*.js
 src/*.d.ts
 src/*.map
 *.log
+!data/test_logs/*.log
 .DS_Store
 .env
 __pycache__/
 venv/
-
