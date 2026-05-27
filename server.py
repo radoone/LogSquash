@@ -124,7 +124,12 @@ class LogCompressor:
                     self.dictionary[key] = line
                     self.reverse_dict[line] = key
 
-        # 2. Boundary-safe segment discovery. Avoid arbitrary n-grams because
+        # 2. Lossless timestamp prefix discovery. The exact timestamp remains
+        # reconstructable as dictionary key + remaining minute/second fragment.
+        if self.mode == "lossless":
+            self.add_lossless_timestamp_prefixes(normalized_lines)
+
+        # 3. Boundary-safe segment discovery. Avoid arbitrary n-grams because
         # they create unreadable dictionary entries from the middle of URLs/loggers.
         fragment_counts: Dict[str, int] = {}
         for line in normalized_lines:
@@ -151,7 +156,7 @@ class LogCompressor:
                 self.dictionary[key] = phrase
                 self.reverse_dict[phrase] = key
 
-        # 3. Final Pass - Replace with dictionary keys
+        # 4. Final Pass - Replace with dictionary keys
         last_key = ""
         repeat_count = 0
         final_lines: List[str] = []
@@ -188,6 +193,65 @@ class LogCompressor:
             header += f"{key}: {val}\n"
 
         return header, final_lines
+
+    def add_lossless_timestamp_prefixes(self, lines: List[str]) -> None:
+        candidates: Dict[str, int] = {}
+
+        for line in lines:
+            for prefix in self.extract_timestamp_prefixes(line):
+                candidates[prefix] = candidates.get(prefix, 0) + 1
+
+        sorted_prefixes = [
+            (prefix, freq)
+            for prefix, freq in candidates.items()
+            if (
+                freq >= 2
+                and len(prefix) >= 15
+                and (freq * (len(prefix) - 3) - (len(prefix) + 5)) > 15
+            )
+        ]
+        sorted_prefixes.sort(key=lambda item: len(item[0]), reverse=True)
+
+        for prefix, _ in sorted_prefixes:
+            if prefix not in self.reverse_dict and not self.is_covered_by_existing_pattern(prefix):
+                key = self.get_next_key()
+                self.dictionary[key] = prefix
+                self.reverse_dict[prefix] = key
+
+    def extract_timestamp_prefixes(self, line: str) -> List[str]:
+        candidates: List[str] = []
+
+        # 2026-05-19 14:25:56 / 2026-05-19T14:25:56.123Z
+        for match in re.finditer(r'\b\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:', line):
+            candidates.append(match.group(0))
+
+        # 2026-05-26 20:59:01.123 CEST -> date + hour prefix is still exact.
+        for match in re.finditer(r'\b\d{4}-\d{2}-\d{2}\s+\d{2}:', line):
+            candidates.append(match.group(0))
+
+        # 26/May/2026:20:59:01 +0200
+        for match in re.finditer(r'\b\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:', line):
+            candidates.append(match.group(0))
+
+        # May 26 20:59:01
+        for match in re.finditer(r'\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s+\d{2}:\d{2}:', line):
+            candidates.append(match.group(0))
+
+        # HDFS-style 081109 203518 -> date + hour prefix.
+        for match in re.finditer(r'\b\d{6}\s+\d{2}', line):
+            candidates.append(match.group(0))
+
+        # Prefer longer prefixes first and dedupe while preserving order.
+        seen = set()
+        unique = []
+        for candidate in sorted(candidates, key=len, reverse=True):
+            if candidate not in seen:
+                seen.add(candidate)
+                unique.append(candidate)
+        return unique
+
+    def is_covered_by_existing_pattern(self, phrase: str) -> bool:
+        return any(phrase in pattern for pattern in self.reverse_dict)
 
     def extract_boundary_phrases(self, line: str) -> List[str]:
         phrases: List[str] = []
@@ -235,7 +299,7 @@ def squash_logs(
     
     Modes:
     - 'semantic' (default): Best for debugging, root-cause analysis, summaries, agent handoffs, and any situation where the goal is to understand what happened with maximum compression. It normalizes noisy values such as timestamps, trace/span metadata, PIDs, API keys, durations, and repeated structured context while keeping errors and important messages readable.
-    - 'lossless': Best for audits, compliance, forensic analysis, exact timing analysis, reproducing event order, or comparing original values. It avoids semantic normalization so timestamps, IDs, metadata fields, line boundaries, and original values remain preserved as much as possible.
+    - 'lossless': Best for audits, compliance, forensic analysis, exact timing analysis, reproducing event order, or comparing original values. It avoids semantic normalization so timestamps, IDs, metadata fields, line boundaries, and original values remain preserved as much as possible. Repeated timestamp prefixes may be dictionary-compressed, but the exact timestamp remains reconstructable from the dictionary key plus the remaining suffix.
     """
     import os
     expected_key = os.getenv("LOGSQUASH_API_KEY")
