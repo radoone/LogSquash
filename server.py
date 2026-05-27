@@ -13,10 +13,15 @@ class LogCompressor:
         self.dictionary: Dict[str, str] = {}
         self.reverse_dict: Dict[str, str] = {}
         self.counter: int = 0
+        self.timestamp_counter: int = 0
 
     def get_next_key(self) -> str:
         self.counter += 1
         return f"#{self.counter}"
+
+    def get_next_timestamp_key(self) -> str:
+        self.timestamp_counter += 1
+        return f"#TS{self.timestamp_counter}:"
 
     def normalize(self, line: str) -> str:
         if self.mode == "lossless":
@@ -190,7 +195,8 @@ class LogCompressor:
 
         header = f"LOG DICTIONARY (Mode: {self.mode}):\n"
         for key, val in self.dictionary.items():
-            header += f"{key}: {val}\n"
+            separator = " = " if key.startswith("#TS") else ": "
+            header += f"{key}{separator}{val}\n"
 
         return header, final_lines
 
@@ -214,7 +220,7 @@ class LogCompressor:
 
         for prefix, _ in sorted_prefixes:
             if prefix not in self.reverse_dict and not self.is_covered_by_existing_pattern(prefix):
-                key = self.get_next_key()
+                key = self.get_next_timestamp_key()
                 self.dictionary[key] = prefix
                 self.reverse_dict[prefix] = key
 
